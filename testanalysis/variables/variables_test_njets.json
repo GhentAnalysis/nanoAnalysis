@@ -1,0 +1,11 @@
+[
+{
+  "name": "nJets",
+  "variable": "nJets",
+  "nbins": "7",
+  "xlow": "-0.5",
+  "xhigh": "6.5",
+  "axtitle": "Number of jets",
+  "unit": ""
+}
+]

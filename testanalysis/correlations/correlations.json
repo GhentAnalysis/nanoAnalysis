@@ -1,0 +1,16 @@
+{
+  "decorrelate_years": [
+    "_jer_jer",
+    "_muonid_stat",
+    "_electronid_syst",
+    "_btagging_lfstats1",
+    "_btagging_lfstats2",
+    "_btagging_hfstats1",
+    "_btagging_hfstats2",
+    "_prefire"
+  ],
+  "decorrelate_processes": [
+    "_njets",
+    "_nbjets"
+  ]
+}

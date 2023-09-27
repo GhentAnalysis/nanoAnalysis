@@ -1,0 +1,167 @@
+[
+{
+  "name": "yield",
+  "variable": "yield",
+  "nbins": "1",
+  "xlow": "0.0",
+  "xhigh": "1.0",
+  "axtitle": "Yield",
+  "unit": ""
+},
+{
+  "name": "nJets",
+  "variable": "nJets",
+  "nbins": "7",
+  "xlow": "-0.5",
+  "xhigh": "6.5",
+  "axtitle": "Number of jets",
+  "unit": ""
+},
+{
+  "name": "nBJets",
+  "variable": "nBJets",
+  "nbins": "4",
+  "xlow": "-0.5",
+  "xhigh": "3.5",
+  "axtitle": "Number of b-tagged jets",
+  "unit": ""
+},
+{
+  "name": "nMuons",
+  "variable": "nMuons",
+  "nbins": "4",
+  "xlow": "-0.5",
+  "xhigh": "3.5",
+  "axtitle": "Number of muons in event",
+  "unit": "",
+  "iscategorical": "true",
+  "xlabels": ["0", "1", "2", "3"]
+},
+{
+  "name": "nMuonsDilep",
+  "variable": "nMuons",
+  "nbins": "3",
+  "xlow": "-0.5",
+  "xhigh": "2.5",
+  "axtitle": "Number of muons in event",
+  "unit": "",
+  "iscategorical": "true",
+  "xlabels": ["0", "1", "2"]
+},
+{
+  "name": "nElectrons",
+  "variable": "nElectrons",
+  "nbins": "4",
+  "xlow": "-0.5",
+  "xhigh": "3.5",
+  "axtitle": "Number of electrons in event",
+  "unit": "",
+  "iscategorical": "true",
+  "xlabels": ["0", "1", "2", "3"]
+},
+{
+  "name": "nElectronsDilep",
+  "variable": "nElectrons",
+  "nbins": "3",
+  "xlow": "-0.5",
+  "xhigh": "2.5",
+  "axtitle": "Number of electrons in event",
+  "unit": "",
+  "iscategorical": "true",
+  "xlabels": ["0", "1", "2"]
+},
+{
+  "name": "HT",
+  "variable": "HT",
+  "nbins": "20",
+  "xlow": "0.0",
+  "xhigh": "800.0",
+  "axtitle": "H_{T}",
+  "unit": "GeV"
+},
+{
+  "name": "LT",
+  "variable": "LT",
+  "nbins": "20",
+  "xlow": "0.0",
+  "xhigh": "800.0",
+  "axtitle": "L_{T}",
+  "unit": "GeV"
+},
+{
+  "name": "jetPtLeading",
+  "variable": "jetPtLeading",
+  "nbins": "20",
+  "xlow": "0.0",
+  "xhigh": "300.0",
+  "axtitle": "Leading jet p_{T}",
+  "unit": "GeV"
+},
+{
+  "name": "jetEtaLeading",
+  "variable": "jetEtaLeading",
+  "nbins": "20",
+  "xlow": "-2.5",
+  "xhigh": "2.5",
+  "axtitle": "Leading jet pseudorapidity",
+  "unit": ""
+},
+{
+  "name": "jetPtSubLeading",
+  "variable": "jetPtSubLeading",
+  "nbins": "20",
+  "xlow": "0.0",
+  "xhigh": "200.0",
+  "axtitle": "Subleading jet p_{T}",
+  "unit": "GeV"
+},
+{
+  "name": "jetEtaSubLeading",
+  "variable": "jetEtaSubLeading",
+  "nbins": "20",
+  "xlow": "-2.5",
+  "xhigh": "2.5",
+  "axtitle": "Subleading jet pseudorapidity",
+  "unit": ""
+},
+{
+  "name": "bjetPtLeading",
+  "variable": "bjetPtLeading",
+  "nbins": "20",
+  "xlow": "0.0",
+  "xhigh": "100.0",
+  "axtitle": "Leading b-tagged jet p_{T}",
+  "unit": "GeV"
+},
+{
+  "name": "bjetEtaLeading",
+  "variable": "bjetEtaLeading",
+  "nbins": "20",
+  "xlow": "-2.5",
+  "xhigh": "2.5",
+  "axtitle": "Leading b-tagged jet pseudorapidity",
+  "unit": ""
+},
+{
+  "name": "nJetsNBJetsCat",
+  "variable": "nJetsNBJetsCat",
+  "nbins": "15",
+  "xlow": "-1.5",
+  "xhigh": "13.5",
+  "axtitle": "Number of (b-tagged) jets category",
+  "unit": "",
+  "iscategorical": "true",
+  "xlabels": ["Other","0b0j","1j","2j","3j",">3j","1b1j","2j", "3j", "4j", ">4j", ">1b2j", "3j", "4j",">4j"]
+},
+{
+  "name": "nJetsNZCat",
+  "variable": "nJetsNZCat",
+  "nbins": "5",
+  "xlow": "-1.5",
+  "xhigh": "3.5",
+  "axtitle": "Number of jets / Z candidates category",
+  "unit": "",
+  "iscategorical": "true",
+  "xlabels": ["Other","2Z","1Z,0j","1Z,1b","1Z,>1b"]
+}
+]

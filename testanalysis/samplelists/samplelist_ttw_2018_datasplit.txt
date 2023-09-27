@@ -1,0 +1,16 @@
+Data  DoubleMuon_Run2018A.root
+Data  DoubleMuon_Run2018B.root
+Data  DoubleMuon_Run2018C.root
+Data  DoubleMuon_Run2018D.root
+Data  EGamma_Run2018A.root
+Data  EGamma_Run2018B.root
+Data  EGamma_Run2018C.root
+Data  EGamma_Run2018D.root
+Data  MuonEG_Run2018A.root
+Data  MuonEG_Run2018B.root
+Data  MuonEG_Run2018C.root
+Data  MuonEG_Run2018D.root
+Data  SingleMuon_Run2018A.root
+Data  SingleMuon_Run2018B.root
+Data  SingleMuon_Run2018C.root
+Data  SingleMuon_Run2018D.root
