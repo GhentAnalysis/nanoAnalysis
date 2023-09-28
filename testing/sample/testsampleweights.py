@@ -16,3 +16,9 @@ if __name__=='__main__':
     # make a SampleWeights object
     weights = SampleWeights(inputfile)
     print(weights)
+
+    # print pdf and scale variations
+    print(weights.pdfweights(returntype='minmax'))
+    print(weights.scaleweights(returntype='all'))
+    print(weights.scaleweights(returntype='minmax'))
+    print(weights.scaleweights(returntype='envelope'))

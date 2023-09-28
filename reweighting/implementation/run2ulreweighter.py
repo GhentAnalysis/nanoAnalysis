@@ -18,6 +18,9 @@ from pileupreweighter import PileupReweighter
 from prefirereweighter import PrefireReweighter
 from customreweighter import CustomReweighter
 from btagreweighter import BTagReweighter
+from psreweighter import PSReweighter
+from pdfreweighter import PDFReweighter
+from scalereweighter import ScaleReweighter
 
 
 def njets_evaluator(events, **kwargs):
@@ -59,7 +62,13 @@ def nbjets_evaluator(events, **kwargs):
 
 def get_run2ul_reweighter( 
       year,
+      sampleweights,
       dobtagnormalize=True ):
+    ### get a correctly configured combined reweighter
+    # input arguments:
+    # - year: data taking year (in str format)
+    # - sampleweights: an object of type SampleWeights for the current sample
+    # - dobtagnormalize: set the b-tagging reweighter to use normalization
 
     # initializations
     reweighter = CombinedReweighter()
@@ -99,5 +108,20 @@ def get_run2ul_reweighter(
     # njets and nbjets reweighter
     reweighter.add_reweighter('njets', CustomReweighter(njets_evaluator))
     reweighter.add_reweighter('nbjets', CustomReweighter(nbjets_evaluator))
+
+    # parton shower reweighter
+    reweighter.add_reweighter('ps', PSReweighter())
+
+    # scale reweighters
+    scalereweighter = ScaleReweighter(sampleweights, rtype='acceptance')
+    reweighter.add_reweighter('scaleacceptance', scalereweighter)
+    scalereweighter = ScaleReweighter(sampleweights, rtype='norm')
+    reweighter.add_reweighter('scalenorm', scalereweighter)
+
+    # pdf reweighters
+    pdfreweighter = PDFReweighter(sampleweights, rtype='acceptance')
+    reweighter.add_reweighter('pdfacceptance', pdfreweighter)
+    pdfreweighter = PDFReweighter(sampleweights, rtype='norm')
+    reweighter.add_reweighter('pdfnorm', pdfreweighter)
 
     return reweighter

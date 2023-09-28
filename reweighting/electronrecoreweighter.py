@@ -5,29 +5,30 @@
 # - https://twiki.cern.ch/twiki/bin/view/CMS/EgammaUL2016To2018
 # - https://twiki.cern.ch/twiki/bin/viewauth/CMS/EgammaSFJSON
 
+
 import sys
 import os
 import array
 import numpy as np
 import awkward as ak
 from correctionlib._core import CorrectionSet
+from pathlib import Path
+sys.path.append(Path(__file__).parents[1])
+from reweighting.abstractreweighter import AbstractReweighter
 
 
-class ElectronRecoReweighter(object):
+class ElectronRecoReweighter(AbstractReweighter):
 
     def __init__(self, sffile, year):
         # input arguments:
         # - sffile: path to json file holding the scale factors
         # - year: data-taking year (string format)
+        super().__init__()
         self.evaluator = CorrectionSet.from_file(sffile)
         self.year = year
         if year=='2016PreVFP': self.year = '2016preVFP'
         if year=='2016PostVFP': self.year = '2016postVFP'
         self.jsonmap = 'UL-Electron-ID-SF'
-        self.unctypes = None
-
-    def get_unctypes(self):
-        return self.unctypes
 
     def get_electrons_ptbin(self, electrons, ptbin):
         ### internal helper function
@@ -41,6 +42,8 @@ class ElectronRecoReweighter(object):
         
     def get_weights(self, electrons, valuetype):
         ### internal helper function
+        # note: valuetype must a valid weight type specifier in EGamma convention,
+        #       i.e. 'sf' for nominal, 'sfup' or 'sfdown'
         # note: correctionlib does not seem to handle jagged arrays,
         #       so need to flatten and unflatten as intermediary steps
         # note: also flattened arrays do not seem to work, not clear why...
@@ -63,6 +66,8 @@ class ElectronRecoReweighter(object):
         return weights
 
     def weights(self, events, electron_mask=None):
+        ### get nominal per-event weights
+        # (overriding abstract method)
         # note: for consistent syntax across reweighters,
         #       electron_mask is a keyword argument,
         #       but in practice it is a required argument
@@ -73,6 +78,8 @@ class ElectronRecoReweighter(object):
         return self.get_weights(electrons, 'sf')
 
     def weightsup(self, events, electron_mask=None, unctype=None):
+        ### get up-varied per-event weights
+        # (overriding abstract method)
         # note: for consistent syntax across reweighters,
         #       electron_mask is a keyword argument,
         #       but in practice it is a required argument
@@ -84,6 +91,8 @@ class ElectronRecoReweighter(object):
         return self.get_weights(electrons, 'sfup')
 
     def weightsdown(self, events, electron_mask=None, unctype=None):
+        ### get down-varied per-event weights
+        # (overriding abstract method)
         # note: for consistent syntax across reweighters,
         #       electron_mask is a keyword argument,
         #       but in practice it is a required argument
@@ -93,3 +102,17 @@ class ElectronRecoReweighter(object):
             raise Exception(msg)
         electrons = events.Electron[electron_mask]
         return self.get_weights(electrons, 'sfdown')
+
+    def weightsvar(self, events, variation, electron_mask=None):
+        ### get varied per-event weights
+        # (overriding abstract method)
+        # note: for consistent syntax across reweighters,
+        #       electron_mask is a keyword argument,
+        #       but in practice it is a required argument
+        # note: variation must be either 'up' or 'down'
+        if electron_mask is None:
+            msg = 'ERROR: electron_mask argument is required.'
+            raise Exception(msg)
+        self.check_variation(variation)
+        electrons = events.Electron[electron_mask]
+        return self.get_weights(electrons, 'sf'+variation)

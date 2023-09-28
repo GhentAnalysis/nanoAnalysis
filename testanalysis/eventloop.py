@@ -134,8 +134,8 @@ if __name__=='__main__':
   nevents = min(args.nentries, nevents)
 
   # make sample generator weights
-  weights = None
-  if( dtype=='sim' ): weights = SampleWeights(args.inputfile)
+  sampleweights = None
+  if( dtype=='sim' ): sampleweights = SampleWeights(args.inputfile)
 
   # load fake rate maps if needed
   electronfrmap = None
@@ -210,7 +210,7 @@ if __name__=='__main__':
   # make a reweighter
   if dtype=='sim':
     print('Initializing reweighter')
-    reweighter = get_run2ul_reweighter(year, dobtagnormalize=True)
+    reweighter = get_run2ul_reweighter(year, sampleweights, dobtagnormalize=True)
     # note: perhaps this should be done inside the loop over selection systematics,
     #       for each selection systematic separately.
     print('Normalizing b-tag reweighter')
@@ -284,14 +284,16 @@ if __name__=='__main__':
       print('  Calculating event variables')
       sys.stdout.flush()
       variables = calculate_event_variables(events,
-        weights=weights, nentries_reweight=nentries_reweight,
+        weights=sampleweights, nentries_reweight=nentries_reweight,
         electron_fo_mask=electron_fo_mask, muon_fo_mask=muon_fo_mask,
         electron_tight_mask=electron_tight_mask, muon_tight_mask=muon_tight_mask,
         jet_mask=jet_mask, bjet_mask=bjet_loose_mask,
         electronfrmap=electronfrmap, muonfrmap=muonfrmap,
         electroncfmap=electroncfmap)
 
-      # evaluate the reweighter
+      # evaluate the reweighter (only for simulation)
+      # note: nominal reweighting factors should be calculated for all selection systematics,
+      #       while reweighting systematics are only needed for nominal selection.
       if dtype=='sim':
         reweighter_kwargs = ({
           'electron_mask': electron_tight_mask,
@@ -303,27 +305,15 @@ if __name__=='__main__':
         print('  Calculate nominal reweighting factors')
         sys.stdout.flush()
         variables['reweight_nominal'] = reweighter.weights(events, **reweighter_kwargs)
-        # only for nominal selection: calculate weight systematics
+        # calculate weight systematics (only for nominal selection)
         if selection_systematic=='nominal':
-          print('  Calculate systematic reweighting factors')
-          sys.stdout.flush()
-          weight_systematics = ([systematic for systematic in args.systematics 
+          weight_systematics = ([systematic for systematic in args.systematics
             if systematics_type[systematic]=='weight'])
-          for systematic in weight_systematics:
-            print('    - {}'.format(systematic))
-            sys.stdout.flush()
-            unctypes = reweighter.get_uncertainties(systematic)
-            if unctypes is None: unctypes = [None]
-            for unctype in unctypes:
-              key = systematic
-              if unctype is not None:
-                key += '_'+unctype
-                print('      - {}'.format(unctype))
-                sys.stdout.flush()
-              up = reweighter.weightsup(events, systematic, unctype=unctype, **reweighter_kwargs)
-              down = reweighter.weightsdown(events, systematic, unctype=unctype, **reweighter_kwargs)
-              variables['reweight_{}_up'.format(key)] = up
-              variables['reweight_{}_down'.format(key)] = down
+          weights = reweighter.allweights(events, reweighternames=weight_systematics,
+            wtype='individual', verbose=True, **reweighter_kwargs)
+          for key, val in weights.items():
+              if key=='nominal': continue
+              variables['reweight_{}'.format(key)] = val
 
       # loop over event selections and selection types
       for eventselection in args.eventselection:

@@ -17,6 +17,8 @@ from preprocessing.preprocessor import PreProcessor
 from samples.sample import year_from_sample_name
 from reweighting.muonidreweighter import MuonIDReweighter
 from reweighting.electronidreweighter import ElectronIDReweighter
+from reweighting.pileupreweighter import PileupReweighter
+from reweighting.prefirereweighter import PrefireReweighter
 from reweighting.combinedreweighter import CombinedReweighter
 
 
@@ -43,20 +45,24 @@ events = NanoEventsFactory.from_root(
 ).events()
 print('Number of events in input file: {}'.format(ak.count(events.event)))
 
-# calculate object masks
-print('Performing jet selection...')
-jet_mask = jetselection(events.Jet, selectionid='run2ul_default')
-jets = events.Jet[jet_mask]
-njets = ak.num(jets)
-print('Number of events: {}'.format(len(events)))
-print('Number of selected jets: {}'.format(ak.sum(jet_mask)))
-
 # make combined reweighter
-muonrecofile = '../../data/leptonid/leptonMVAUL_SF_muons_Medium_2018.root'
-electronrecofile = '../../data/leptonid/leptonMVAUL_SF_electrons_Medium_2018.root'
 reweighter = CombinedReweighter()
-reweighter.add_reweighter('muonid', MuonIDReweighter(muonrecofile, 'Medium'))
-reweighter.add_reweighter('electronid', ElectronIDReweighter(electronrecofile))
+wfile = os.path.join('../../data/pileup', 'puWeights_{}.json'.format(year))
+reweighter.add_reweighter('pileup', PileupReweighter(wfile, year))
+reweighter.add_reweighter('prefire', PrefireReweighter(prefiretype='all'))
 
 # printouts for testing
-print(reweighter.get_uncertainties())
+print(reweighter.get_unctypes())
+print(reweighter.get_variations())
+
+# calculate total weights
+res1 = reweighter.allweights(events, wtype='total', verbose=True)
+print(res1.keys())
+print(res1['pileup_up'])
+
+# calculate individual weights
+res2 = reweighter.allweights(events, wtype='individual', verbose=True)
+print(res2.keys())
+print(res2['pileup_up'])
+tot = np.multiply(np.divide(res2['nominal'],res2['pileup']),res2['pileup_up'])
+print(tot)

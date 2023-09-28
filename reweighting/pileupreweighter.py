@@ -10,12 +10,16 @@ import os
 import numpy as np
 import awkward as ak
 from correctionlib._core import CorrectionSet
+from pathlib import Path
+sys.path.append(Path(__file__).parents[1])
+from reweighting.abstractreweighter import AbstractReweighter
 
 
-class PileupReweighter(object):
+class PileupReweighter(AbstractReweighter):
 
     def __init__(self, sffile, year):
         ### initializer
+        super().__init__()
         self.evaluator = CorrectionSet.from_file(sffile)
         yeardict = {
           '2016PreVFP': '16',
@@ -24,11 +28,7 @@ class PileupReweighter(object):
           '2018': '18'
         }
         self.jsonmap = 'Collisions{}_UltraLegacy_goldenJSON'.format(yeardict[year])
-        self.unctypes = None
     
-    def get_unctypes(self):
-        return self.unctypes
-
     def get_weights(self, events, systematic):
         ### internal helper function
         # note: correctionlib does not seem to handle jagged arrays,
@@ -42,12 +42,25 @@ class PileupReweighter(object):
         return weights
 
     def weights(self, events):
+        ### get nominal per-event weights
+        # (overriding abstract method)
         return self.get_weights(events, 'nominal')
 
     def weightsup(self, events, unctype=None):
+        ### get up-varied per-event weights
+        # (overriding abstract method)
         # note: unctype argument is needed for consistent syntax, but not used
         return self.get_weights(events, 'up')
 
     def weightsdown(self, events, unctype=None):
+        ### get down-varied per-event weights
+        # (overriding abstract method)
         # note: unctype argument is needed for consistent syntax, but not used
         return self.get_weights(events, 'down')
+
+    def weightsvar(self, events, variation):
+        ### get varied per-event weights
+        # (overriding abstract method)
+        # note: variation must be either 'up' or 'down'
+        self.check_variation(variation)
+        return self.get_weights(events, variation)

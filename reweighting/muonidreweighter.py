@@ -5,6 +5,7 @@
 # - https://github.com/LukaLambrecht/ewkino/blob/d536cd7082f44875ed61a44282d5bac5c12bfe2d/weights/src/ConcreteReweighterFactory.cc#L245
 # - https://coffeateam.github.io/coffea/notebooks/applying_corrections.html#Coffea-lookup_tools
 
+
 import sys
 import os
 import array
@@ -12,8 +13,12 @@ import uproot
 import numpy as np
 import awkward as ak
 from coffea.lookup_tools.dense_lookup import dense_lookup
+from pathlib import Path
+sys.path.append(Path(__file__).parents[1])
+from reweighting.abstractreweighter import AbstractReweighter
 
-class MuonIDReweighter(object):
+
+class MuonIDReweighter(AbstractReweighter):
 
     def __init__(self, sffile, wp):
         ### initializer
@@ -26,6 +31,7 @@ class MuonIDReweighter(object):
         # - the histogram "[...]_combined_syst" contains the absolute (systematic) uncertainties 
         #   as bin contents.
         # - the histogram "[]_stat" contains the absolute (statistical) uncertainties as bin errors.
+        super().__init__()
         with uproot.open(sffile) as f:
             basename = 'NUM_LeptonMva{}_DEN_TrackerMuons_abseta_pt'.format(wp)
             (nominal, eta_edges, pt_edges) = f[basename].to_numpy()
@@ -37,16 +43,10 @@ class MuonIDReweighter(object):
           'syst': dense_lookup(syst, [eta_edges, pt_edges])
         }
         self.unctypes = ['syst', 'stat']
-
-    def get_unctypes(self):
-        return self.unctypes
-        
-    def check_unctype(self, unctype):
-        ### internal helper function: check validity of provided uncertainty type
-        if not unctype in self.unctypes:
-            msg = 'ERROR: uncertainty {} not recognized;'.format(unctype)
-            msg += ' allowed values are {}'.format(self.unctypes)
-            raise Exception(msg)
+        self.variations = []
+        for unctype in self.unctypes:
+            self.variations.append(unctype+'_up')
+            self.variations.append(unctype+'_down')
 
     def get_muon_weights(self, muons, weighttype):
         ### internal helper function: retrieve per-muon weights
@@ -74,6 +74,8 @@ class MuonIDReweighter(object):
         return self.get_muon_weights(muons, unctype)
 
     def weights(self, events, muon_mask=None):
+        ### get nominal per-event weights
+        # (overriding abstract method)
         # note: for consistent syntax across reweighters,
         #       muon_mask is a keyword argument,
         #       but in practice it is a required argument
@@ -85,28 +87,42 @@ class MuonIDReweighter(object):
         weights = ak.prod(weights, axis=1)
         return weights
 
-    def weightsup(self, events, muon_mask=None, unctype=None):
-        # note: for consistent syntax across reweighters,
-        #       muon_mask is a keyword argument,
-        #       but in practice it is a required argument
+    def weightsupdown(self, events, upordown, muon_mask=None, unctype=None):
+        ### internal helper function to group common code for weightsup and weightsdown
         if muon_mask is None:
             msg = 'ERROR: muon_mask argument is required.'
             raise Exception(msg)
         muons = events.Muon[muon_mask]
         unc = self.get_muon_uncertainty(muons, unctype=unctype)
-        weights = self.get_muon_weights(muons, 'nominal') + unc
+        sumfactor = 1 if upordown=='up' else -1
+        weights = self.get_muon_weights(muons, 'nominal') + sumfactor*unc
         weights = ak.prod(weights, axis=1)
         return weights
 
-    def weightsdown(self, events, muon_mask=None, unctype=None):
+    def weightsup(self, events, muon_mask=None, unctype=None):
+        ### get up-varied per-event weights
+        # (overriding abstract method)
         # note: for consistent syntax across reweighters,
         #       muon_mask is a keyword argument,
         #       but in practice it is a required argument
-        if muon_mask is None:
-            msg = 'ERROR: muon_mask argument is required.'
-            raise Exception(msg)
-        muons = events.Muon[muon_mask]
-        unc = self.get_muon_uncertainty(muons, unctype=unctype)
-        weights = self.get_muon_weights(muons, 'nominal') - unc
-        weights = ak.prod(weights, axis=1)
-        return weights
+        return self.weightsupdown(events, 'up', muon_mask=muon_mask, unctype=unctype)
+
+    def weightsdown(self, events, muon_mask=None, unctype=None):
+        ### get down-varied per-event weights
+        # (overriding abstract method)
+        # note: for consistent syntax across reweighters,
+        #       muon_mask is a keyword argument,
+        #       but in practice it is a required argument
+        return self.weightsupdown(events, 'down', muon_mask=muon_mask, unctype=unctype)
+
+    def weightsvar(self, events, variation, muon_mask=None):
+        ### get varied per-event weights
+        # (overriding abstract method)
+        # note: for consistent syntax across reweighters,
+        #       muon_mask is a keyword argument,
+        #       but in practice it is a required argument
+        # note: variation must be chosen from valid variations,
+        #       e.g. 'syst_down', 'stat_up', etc.
+        self.check_variation(variation)
+        (unctype, upordown) = variation.split('_')
+        return self.weightsupdown(events, variation, muon_mask=muon_mask, unctype=unctype)

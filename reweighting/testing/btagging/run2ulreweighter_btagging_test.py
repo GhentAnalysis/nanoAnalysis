@@ -54,10 +54,7 @@ weights = reweighter.singleweights(events, 'btagging', jet_mask=jet_mask)
 weightsup = reweighter.singleweightsup(events, 'btagging', jet_mask=jet_mask)
 weightsdown = reweighter.singleweightsdown(events, 'btagging', jet_mask=jet_mask)
 weightssplit = {}
-systematics = [
-  'cferr1', 'cferr2', 'lf', 'hf', 
-  'lfstats1', 'lfstats2', 'hfstats1', 'hfstats2'
-]
+systematics = reweighter.get_unctypes(name='btagging')
 for sys in systematics:
     weightssplit[sys] = {
       'up': reweighter.singleweightsup(events, 'btagging', jet_mask=jet_mask, unctype=sys),

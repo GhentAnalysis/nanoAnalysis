@@ -84,8 +84,22 @@ if __name__=='__main__':
 
     # extract the weight systematics from nominal tree
     nominaltree = inputfile[eventselection][selectiontype]['nominal']['Events']
-    weight_systematics = ([branch.replace('reweight_','') for branch in nominaltree.keys()
-                           if branch.startswith('reweight_')])
+    weight_systematics = ([branch.replace('reweight_','').replace('_nom','') 
+                           for branch in nominaltree.keys()
+                           if(branch.startswith('reweight_') and branch.endswith('_nom'))])
+    # (e.g. weight_systematics = ['muonid'])
+    weight_variations = ([branch.replace('reweight_','') for branch in nominaltree.keys()
+                           if( branch.startswith('reweight_') and not branch.endswith('_nom'))])
+    # (e.g. weight_variations = ['nominal', 'muonid_stat_up', 'muonid_stat_down', etc.])
+    weight_vartonom = {}
+    for weight_variation in weight_variations:
+        if weight_variation=='nominal': continue
+        match = None
+        for weight_systematic in weight_systematics:
+            if '{}'.format(weight_systematic) in weight_variation:
+                match = weight_systematic
+                break
+        weight_vartonom[weight_variation] = match
 
     # printouts of the above
     print('Event selection levels:')
@@ -95,9 +109,12 @@ if __name__=='__main__':
         print('    - {}'.format(selectiontype))
         for selection_variation in selectionlevels[eventselection][selectiontype]:
           print('      - {}'.format(selection_variation))
-    print('Weight systematics:')
-    for weight_systematic in weight_systematics:
-      print('  - {}'.format(weight_systematic))
+    print('Weight variations:')
+    for weight_variation in weight_variations:
+      txt = '  - {}'.format(weight_variation)
+      if weight_variation!='nominal':
+          txt += ' (variation on {})'.format(weight_vartonom[weight_variation])
+      print(txt)
 
     # initialize dict of histograms
     hists = {}
@@ -108,20 +125,22 @@ if __name__=='__main__':
       for selectiontype in selectionlevels[eventselection]:
         hists[eventselection][selectiontype] = {}
         for selection_variation in selectionlevels[eventselection][selectiontype]:
-          systematics = [selection_variation]
+          variations = [selection_variation]
           if selection_variation=='nominal':
-            if dtype=='sim': systematics = weight_systematics
-            else: systematics = ['nominal']
-          for systematic in systematics:
-            hists[eventselection][selectiontype][systematic] = []
+            if dtype=='sim': variations = weight_variations
+            else: variations = ['nominal']
+          for variation in variations:
+            hists[eventselection][selectiontype][variation] = []
             print('Now running on {} / {} / {}'.format(
-              eventselection, selectiontype, systematic))
+              eventselection, selectiontype, variation))
+            
             # read the tree
             events = inputfile[eventselection][selectiontype][selection_variation]['Events']
             nevents = events.num_entries
             print('Found tree with {} entries.'.format(nevents))
             # convert to group of arrays
             events = events.arrays(library='np')
+            
             # calculate correct event weights (before reweighting)
             if dtype=='data': weights = np.ones(nevents)
             else: weights = events['genNormWeight'] * args.xsec * args.lumi
@@ -135,13 +154,21 @@ if __name__=='__main__':
               cfweights = events['chargeFlipWeight']
               if dtype=='sim': cfweights = np.zeros(nevents)
               weights = np.multiply(weights, cfweights)
+            
             # modify event weights with reweighting factor
+            # note: the reweighting factors in the nominal tree
+            #       are individual reweighting factors,
+            #       so some extra arithmetic is needed to calculate the total weight
             if dtype=='sim':
-              weight_key = 'nominal'
-              if( systematic != selection_variation ):
-                weight_key = systematic
-              reweight_nominal = events['reweight_{}'.format(weight_key)]
-              weights = np.multiply(weights, reweight_nominal)
+              nomweights = events['reweight_nominal']
+              reweight = nomweights # default case: just use nominal weights
+              if( selection_variation=='nominal' ):
+                if( variation!='nominal' ):
+                  nomweights_single = events['reweight_{}_nom'.format(weight_vartonom[variation])]
+                  nomweights_withoutsingle = np.divide( nomweights, nomweights_single )
+                  reweight = np.multiply(nomweights_withoutsingle, events['reweight_{}'.format(variation)])
+              weights = np.multiply(weights, reweight)
+            
             # modify process name if needed
             thisprocess = args.process
             if thisprocess is not None:
@@ -149,6 +176,7 @@ if __name__=='__main__':
               if selectiontype=='efakerate': thisprocess = 'NonpromptE'
               if selectiontype=='mfakerate': thisprocess = 'NonpromptMu'
               if selectiontype=='chargeflips': thisprocess = 'Chargeflips'
+            
             # loop over variables
             for variable in variables:
               if variable.variable not in events.keys():
@@ -156,7 +184,7 @@ if __name__=='__main__':
                 print(msg)
                 continue
               # initialize a histogram
-              histname = '{}_{}_{}_{}'.format(eventselection, selectiontype, variable.name, systematic)
+              histname = '{}_{}_{}_{}'.format(eventselection, selectiontype, variable.name, variation)
               if thisprocess is not None: histname = '{}_{}'.format(thisprocess, histname)
               hist = variable.initialize_histogram(histname=histname)
               # clip the values to be inside the histogram range
@@ -167,7 +195,7 @@ if __name__=='__main__':
               # fill the histogram
               for val, weight in zip(values, weights):
                 hist.Fill(val, weight)
-              hists[eventselection][selectiontype][systematic].append(hist)
+              hists[eventselection][selectiontype][variation].append(hist)
 
   # write to output file
   # (note: deliberately using PyROOT instead of uproot
@@ -179,8 +207,8 @@ if __name__=='__main__':
     # write all histograms
     for eventselection in hists.keys():
       for selectiontype in hists[eventselection].keys():
-        for systematic in hists[eventselection][selectiontype].keys():
-          for hist in hists[eventselection][selectiontype][systematic]:
+        for variation in hists[eventselection][selectiontype].keys():
+          for hist in hists[eventselection][selectiontype][variation]:
             hist.Write()
     outputfile.Close()
   

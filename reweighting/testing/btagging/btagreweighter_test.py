@@ -53,10 +53,7 @@ weights = reweighter.weights(events, jet_mask=jet_mask)
 weightsup = reweighter.weightsup(events, jet_mask=jet_mask)
 weightsdown = reweighter.weightsdown(events, jet_mask=jet_mask)
 weightssplit = {}
-systematics = [
-  'cferr1', 'cferr2', 'lf', 'hf', 
-  'lfstats1', 'lfstats2', 'hfstats1', 'hfstats2'
-]
+systematics = reweighter.get_unctypes()
 for sys in systematics:
     weightssplit[sys] = {
       'up': reweighter.weightsup(events, jet_mask=jet_mask, unctype=sys),

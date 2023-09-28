@@ -10,38 +10,34 @@ import sys
 import os
 import numpy as np
 import awkward as ak
+from pathlib import Path
+sys.path.append(Path(__file__).parents[1])
+from reweighting.abstractreweighter import AbstractReweighter
 
 
-class PrefireReweighter(object):
+class PrefireReweighter(AbstractReweighter):
 
     def __init__(self, prefiretype='all'):
         ### initializer
+        super().__init__()
         self.prefiretype = prefiretype
         allowed_types = ['all', 'ecal', 'muon']
         if not prefiretype in allowed_types:
           msg = 'ERROR: prefire type {} is not recognized;'.format(prefiretype)
           msg += ' allowed values are {}'.format(allowed_values)
           raise Exception(msg)
-        self.unctypes = None
-        if prefiretype=='muon': self.unctypes=['Stat', 'Syst']
-
-    def get_unctypes(self):
-        return self.unctypes
-
-    def check_unctype(self, unctype):
-        ### internal helper function: check validity of provided uncertainty type
-        if not unctype in self.unctypes:
-            msg = 'ERROR: uncertainty {} not recognized;'.format(unctype)
-            msg += ' allowed values are {}'.format(self.unctypes)
-            raise Exception(msg)
+        if prefiretype=='muon':
+            self.unctypes = ['Stat', 'Syst']
+            self.variations = []
+            for unctype in self.unctypes:
+                self.variations.append(unctype+'_up')
+                self.variations.append(unctype+'_down')
 
     def get_weights(self, events, shift, unctype=None):
         ### internal helper function
         fieldname = 'L1PreFiringWeight'
         varname = ''
         if self.prefiretype=='ecal': varname = 'ECAL_'
-        # todo: extend to statistical up and down for muons
-        #       (which are not available for other prefiring types)
         elif self.prefiretype=='muon':
             varname = 'Muon_'
             if shift!='Nom':
@@ -54,10 +50,33 @@ class PrefireReweighter(object):
         return getattr(getattr(events, fieldname), varname)
 
     def weights(self, events):
+        ### get nominal per-event weights
+        # (overriding abstract method)
         return self.get_weights(events, 'Nom')
 
     def weightsup(self, events, unctype=None):
+        ### get up-varied per-event weights
+        # (overriding abstract method)
+        # note: unctype is ignored except for muon prefiring
         return self.get_weights(events, 'Up', unctype=unctype)
 
     def weightsdown(self, events, unctype=None):
+        ### get down-varied per-event weights
+        # (overriding abstract method)
+        # note: unctype is ignored except for muon prefiring
         return self.get_weights(events, 'Dn', unctype=unctype)
+
+    def weightsvar(self, events, variation):
+        ### get varied per-event weights
+        # (overriding abstract method)
+        # note: variation must either 'up' or 'down'
+        #       for general and ecal prefiring,
+        #       and 'Syst_up', 'Stat_down', etc.
+        #       for muon prefiring.
+        self.check_variation(variation)
+        unctype = None
+        upordown = variation
+        if '_' in variation: unctype, upordown = variation.split('_')
+        if upordown=='up': upordown = 'Up'
+        if upordown=='down': upordown = 'Dn'
+        return self.get_weights(events, upordown, unctype=unctype)

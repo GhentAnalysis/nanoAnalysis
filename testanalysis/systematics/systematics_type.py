@@ -34,4 +34,9 @@ systematics_type = ({
   'jec': 'jetselection',
   'jer': 'jetselection',
   'uncl': 'metselection',
+  'ps': 'weight',
+  'pdfacceptance': 'weight',
+  'pdfnorm': 'weight',
+  'scaleacceptance': 'weight',
+  'scalenorm': 'weight'
 })

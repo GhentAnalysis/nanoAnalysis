@@ -43,3 +43,22 @@ def get_selection_systematics(events, systematics, includenominal=False):
             raise Exception(msg)
     if includenominal: selection_systematics['nominal'] = ['nominal']
     return selection_systematics
+
+def get_weight_systematics(reweighter, systematics, includenominal=False):
+    ### get a dict of weight systematics
+    # input arguments:
+    # - reweighter: a CombinedReweighter instance
+    # - systematics: a list of valid systematic names
+    #   (must be keys in the systematics_type dict)
+    # - includenominal: include "nominal" in output
+    # returns:
+    # a dict with all weight systematics mapped to their variations,
+    # e.g. ["muonid"] -> {"muonid": ["stat_up", "stat_down", "syst_up", "syst_down"]}.
+    # if there are no variations, the key is repeated as value,
+    # e.g. {"nominal": ["nominal"]}
+    weight_systematics = ([systematic for systematic in args.systematics
+      if systematics_type[systematic]=='weight'])
+    weight_systematics = {key: [] for key in weight_systematics}
+    for weight_systematic in weight_systematics.keys():
+        weight_systematics[weight_systematic] = reweighter.get_variations(weight_systematic)
+    return weight_systematics

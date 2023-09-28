@@ -12,8 +12,12 @@ import uproot
 import numpy as np
 import awkward as ak
 from coffea.lookup_tools.dense_lookup import dense_lookup
+from pathlib import Path
+sys.path.append(Path(__file__).parents[1])
+from reweighting.abstractreweighter import AbstractReweighter
 
-class ElectronIDReweighter(object):
+
+class ElectronIDReweighter(AbstractReweighter):
 
     def __init__(self, sffile):
         ### initializer
@@ -23,6 +27,7 @@ class ElectronIDReweighter(object):
         # - the bin errors in the nominal histogram are irrelevant and can be ignored.
         # - the histogram "sys" contains the absolute (systematic) uncertainties as bin contents.
         # - the histogram "stat" contains the absolute (statistical) uncertainties as bin contents.
+        super().__init__()
         with uproot.open(sffile) as f:
             (nominal, eta_edges, pt_edges) = f['EGamma_SF2D'].to_numpy()
             syst = f['sys'].values()
@@ -33,16 +38,10 @@ class ElectronIDReweighter(object):
           'syst': dense_lookup(syst, [eta_edges, pt_edges])
         }
         self.unctypes = ['syst', 'stat']
-
-    def get_unctypes(self):
-        return self.unctypes
-        
-    def check_unctype(self, unctype):
-        ### internal helper function: check validity of provided uncertainty type
-        if not unctype in self.unctypes:
-            msg = 'ERROR: uncertainty {} not recognized;'.format(unctype)
-            msg += ' allowed values are {}'.format(self.unctypes)
-            raise Exception(msg)
+        self.variations = []
+        for unctype in self.unctypes:
+            self.variations.append(unctype+'_up')
+            self.variations.append(unctype+'_down')
 
     def get_electron_weights(self, electrons, weighttype):
         ### internal helper function: retrieve per-electron weights
@@ -70,6 +69,8 @@ class ElectronIDReweighter(object):
         return self.get_electron_weights(electrons, unctype)
 
     def weights(self, events, electron_mask=None):
+        ### get nominal weights
+        # (overriding abstract method)
         # note: for consistent syntax across reweighters,
         #       electron_mask is a keyword argument,
         #       but in practice it is a required argument
@@ -81,28 +82,44 @@ class ElectronIDReweighter(object):
         weights = ak.prod(weights, axis=1)
         return weights
 
-    def weightsup(self, events, electron_mask=None, unctype=None):
-        # note: for consistent syntax across reweighters,
-        #       electron_mask is a keyword argument,
-        #       but in practice it is a required argument
+    def weightsupdown(self, events, upordown, electron_mask=None, unctype=None):
+        ### internal helper function to group common code for weightsup and weightsdown
         if electron_mask is None:
             msg = 'ERROR: electron_mask argument is required.'
             raise Exception(msg)
         electrons = events.Electron[electron_mask]
         unc = self.get_electron_uncertainty(electrons, unctype=unctype)
-        weights = self.get_electron_weights(electrons, 'nominal') + unc
+        sumfactor = 1 if upordown=='up' else -1
+        weights = self.get_electron_weights(electrons, 'nominal') + sumfactor*unc
         weights = ak.prod(weights, axis=1)
         return weights
 
-    def weightsdown(self, events, electron_mask=None, unctype=None):
+    def weightsup(self, events, electron_mask=None, unctype=None):
+        ### get up-varied per-event weights
+        # (overriding abstract method)
+        # note: unctype must be either 'syst' or 'stat'
         # note: for consistent syntax across reweighters,
         #       electron_mask is a keyword argument,
         #       but in practice it is a required argument
-        if electron_mask is None:
-            msg = 'ERROR: electron_mask argument is required.'
-            raise Exception(msg)
-        electrons = events.Electron[electron_mask]
-        unc = self.get_electron_uncertainty(electrons, unctype=unctype)
-        weights = self.get_electron_weights(electrons, 'nominal') - unc
-        weights = ak.prod(weights, axis=1)
-        return weights
+        return self.weightsupdown(events, 'up', electron_mask=electron_mask, unctype=unctype)
+
+    def weightsdown(self, events, electron_mask=None, unctype=None):
+        ### get down-varied per-event weights
+        # (overriding abstract method)
+        # note: unctype must be either 'syst' or 'stat'
+        # note: for consistent syntax across reweighters,
+        #       electron_mask is a keyword argument,
+        #       but in practice it is a required argument
+        return self.weightsupdown(events, 'down', electron_mask=electron_mask, unctype=unctype)
+
+    def weightsvar(self, events, variation, electron_mask=None):
+        # get varied per-event weights
+        # (overriding abstract method)
+        # note: variation must be chosen from valid variations,
+        #       e.g. 'syst_up', 'stat_down', etc.
+        # note: for consistent syntax across reweighters,
+        #       electron_mask is a keyword argument,
+        #       but in practice it is a required argument
+        self.check_variation(variation)
+        (unctype, upordown) = variation.split('_')
+        return self.weightsupdown(events, upordown, electron_mask=electron_mask, unctype=unctype) 
